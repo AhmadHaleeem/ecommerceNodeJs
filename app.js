@@ -1,9 +1,12 @@
 const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
+
+const mongoose = require('mongoose');
+
 const errorController = require('./controllers/error');
 
-const mongoConnect = require('./util/database').mongoConnect;
+// const mongoConnect = require('./util/database').mongoConnect;
 
 const User = require('./models/user');
 
@@ -21,11 +24,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Just to store user data as middleware
+// Just to store user data as default
 app.use((req, res, next) => {
-  User.findById('5c5cb0819add885063313569')
+  User.findById('5c5da68f904e3339744f377d')
     .then(user => {
-      req.user = new User(user.name, user.email, user.cart, user._id);
+      req.user = user;
       next();
     })
     .catch(err => console.log(err));
@@ -36,6 +39,21 @@ app.use(userRoutes);
 
 app.use(errorController.get404);
 
-mongoConnect(() => {
-  app.listen(3000);
-});
+mongoose
+  .connect('mongodb+srv://Ahmad:ahmad0991445186@cluster0-yqjps.mongodb.net/shop?retryWrites=true')
+  .then(result => {
+    User.findOne().then(user => {
+      if (!user) {
+        const user = new User({
+          name: 'Ahmad',
+          email: 'test@test.nl',
+          cart: {
+            items: [],
+          },
+        });
+        user.save();
+      }
+    });
+    app.listen(3000);
+  })
+  .catch(err => console.log(err));
