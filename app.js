@@ -7,6 +7,7 @@ const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
 const csrf = require('csurf');
 const flash = require('connect-flash');
+const multer = require('multer');
 
 const errorController = require('./controllers/error');
 
@@ -25,6 +26,30 @@ const store = new MongoDBStore({
 // To protect my app from CSRF attack
 const csrfProtection = csrf();
 
+// Multer configuration
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // to tell multer it's ok to store it
+    cb(null, 'images');
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + '-' + file.originalname);
+  },
+});
+
+// store the image depending on types
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === 'image/png' ||
+    file.mimetype === 'image/jpg' ||
+    file.mimetype === 'image/jpeg'
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
+
 // Initialize the flash message
 app.use(flash());
 
@@ -39,8 +64,13 @@ const authRoutes = require('./routes/auth');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 
+// Helper to work wih files [file, image, ...]
+app.use(multer({ storage: fileStorage, fileFilter: fileFilter }).single('image'));
+
 // To Access the public folder which contains all CSS - JS files
 app.use(express.static(path.join(__dirname, 'public')));
+// To Access the images folder which contains all images
+app.use('/images', express.static(path.join(__dirname, 'images')));
 
 // Initialize the sessions through connect-mongodb-session package
 app.use(session({ secret: 'my secret', resave: false, saveUninitialized: false, store: store }));
@@ -53,10 +83,15 @@ app.use((req, res, next) => {
   }
   User.findById(req.session.user._id)
     .then(user => {
+      if (!user) {
+        return next();
+      }
       req.user = user;
       next();
     })
-    .catch(err => console.log(err));
+    .catch(err => {
+      throw new Error(err);
+    });
 });
 
 // Set Local variable to all routes
