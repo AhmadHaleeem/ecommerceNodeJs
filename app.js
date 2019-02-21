@@ -11,6 +11,10 @@ const multer = require('multer');
 
 const errorController = require('./controllers/error');
 
+const shopController = require('./controllers/shop');
+
+const isAuth = require('./middleware/is-auth');
+
 const User = require('./models/user');
 
 const MONGODB_URI =
@@ -75,8 +79,6 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 // Initialize the sessions through connect-mongodb-session package
 app.use(session({ secret: 'my secret', resave: false, saveUninitialized: false, store: store }));
 
-app.use(csrfProtection);
-
 app.use((req, res, next) => {
   if (!req.session.user) {
     return next();
@@ -94,6 +96,9 @@ app.use((req, res, next) => {
     });
 });
 
+app.post('/create-order', isAuth, shopController.postOrder);
+
+app.use(csrfProtection);
 // Set Local variable to all routes
 app.use((req, res, next) => {
   res.locals.isAuthenticated = req.session.isLoggedIn;

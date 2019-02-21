@@ -160,6 +160,7 @@ exports.getProducts = (req, res, next) => {
     .catch(err => console.log(err));
 };
 
+// Delete method from server side
 exports.postDeleteProduct = (req, res, next) => {
   const productId = req.body.productId;
   Product.findById(productId)
@@ -175,4 +176,25 @@ exports.postDeleteProduct = (req, res, next) => {
       res.redirect('/admin/products');
     })
     .catch(err => console.log(err));
+};
+
+// Delete method from frontend side
+exports.deleteProduct = (req, res, next) => {
+  const productId = req.params.productId;
+
+  Product.findById(productId)
+    .then(product => {
+      if (!product) {
+        console.log('Product not found');
+      }
+      fileHelper.deleteFile(product.imageUrl);
+      return Product.deleteOne({ _id: productId, userId: req.user._id });
+    })
+    .then(() => {
+      console.log('Destroyed Product ');
+      res.status(200).json({ message: 'Success' });
+    })
+    .catch(err => {
+      res.status(500).json({ message: 'Deleting product failed!' });
+    });
 };
